@@ -4,6 +4,8 @@ import Control.Monad
 
 import qualified Data.ByteString.Char8 as B8
 
+import qualified TCP
+import qualified Transport
 import qualified Pub
 
 main = do ref <- Pub.newContext

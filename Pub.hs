@@ -79,6 +79,9 @@ connectPort ref port = do
 
 
 
+--
+-- TODO: buffer and user blaze/builder for 4096 bytes per call
+--
 runConn :: Conn -> IO ()
 runConn conn = void $ forkIO $ do
     print "Conn started"
