@@ -8,8 +8,8 @@ main = do
     bchan <- newBatchedChan 100
     void $ forkIO $ produce bchan
     forever $ do
-        a <- BC.tryReadChan bchan
-        case a of
+        r <- BC.tryReadChan bchan
+        case r of
             Nothing -> print "Empty"
             Just e -> print e
 
