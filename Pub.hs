@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
 
+module Pub where
+
 import Data.Word
 import Data.Foldable
 import Data.IORef
@@ -30,9 +32,14 @@ newConn sock = do (inChan, outChan) <- Chan.newChan queueSize
                    
 
 
-newtype ContextRef a = ContextRef { getContextRef :: IORef Context } deriving Functor
+newtype ContextRef a = ContextRef { unContextRef :: IORef Context } deriving Functor
 
 data Context = Context { conns :: [Conn] }
+
+-- TODO: monadic interface?
+withContext :: ContextRef a -> (Context -> IO ()) -> IO ()
+withContext ref f = do ctx <- readIORef (unContextRef ref)
+                       f ctx
 
 
 
@@ -40,18 +47,18 @@ newContext :: IO (ContextRef a)
 newContext = newIORef (Context []) >>= return . ContextRef
 
 updateContext :: (Context -> Context) -> ContextRef a -> IO ()
-updateContext update ctx = modifyIORef' (getContextRef ctx) update
+updateContext update ref = atomicModifyIORef' (unContextRef ref) (\ctx -> (update ctx, ()))
 
 addConn :: Conn -> Context -> Context
 addConn conn ctx@Context{conns = conns} = ctx { conns = conn:conns }
 
 
-publish :: Context -> ByteString -> IO ()
-publish ctx msg = traverse_ (push msg) (conns ctx)
-  where push msg conn = do full <- tryWriteChan (inChan conn) msg
-                           if full
-                               then print "Dropping message"
-                               else return ()
+publish :: ByteString -> Context -> IO ()
+publish msg ctx = traverse_ (push msg) (conns ctx)
+  where push msg conn = do done <- Chan.tryWriteChan (inChan conn) msg
+                           if done
+                               then return ()
+                               else print "Dropping message"
 
 
 
@@ -64,6 +71,8 @@ connectPort ref port = do
     conn <- newConn sock
     updateContext (addConn conn) ref
 
+    runConn conn
+
     void $ send sock "hello\n" mempty
 
 
@@ -72,6 +81,7 @@ connectPort ref port = do
 
 runConn :: Conn -> IO ()
 runConn conn = void $ forkIO $ do
+    print "Conn started"
     forever $ do
     msg <- Chan.readChan o
     send s msg mempty
