@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 import Control.Monad
 
 import qualified Data.ByteString.Char8 as B8
