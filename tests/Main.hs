@@ -1,5 +1,6 @@
 import Data.List
 import System.Environment
+import System.Exit
 import System.IO
 import Text.Printf
 
@@ -12,13 +13,15 @@ main = do
     args <- getArgs
     case args of
         [test] -> runTest test
-        _      -> hPrintf stderr "Usage: %s %s\n" prog $ intercalate "|" $ map fst tests
+        _      -> do hPrintf stderr "Usage: %s %s\n" prog $ intercalate "|" $ map fst tests
+                     exitFailure
 
 runTest :: String -> IO ()
 runTest name = do
     case lookup name tests of
-        Nothing   -> hPutStrLn stderr "Error: invalid specified test"
-        Just test -> do hPrintf stderr "Running %s\n" name
+        Nothing   -> do hPutStrLn stderr "Error: invalid specified test"
+                        exitFailure
+        Just test -> do hPrintf stderr "Running %s test...\n" name
                         test
 
 tests :: [(String, IO ())]
