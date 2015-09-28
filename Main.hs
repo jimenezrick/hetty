@@ -1,3 +1,7 @@
+main :: IO ()
+main = undefined
+
+{-
 import Control.Monad
 
 import qualified Data.ByteString.Char8 as B8
@@ -22,3 +26,4 @@ msg n = B8.pack $ replicate (n-1) '0' ++ ['\n']
 
 msg10   = msg 10
 msg100  = msg 100
+-}

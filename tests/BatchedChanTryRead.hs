@@ -1,10 +1,12 @@
+module BatchedChanTryRead where
+
 import Control.Concurrent
 import Control.Monad
 
 import Control.Concurrent.Chan.Bounded.Batched as CBB
 
-main :: IO ()
-main = do
+run :: IO ()
+run = do
     bchan <- newBatchedChan 100
     void $ forkIO $ produce bchan
     forever $ do
