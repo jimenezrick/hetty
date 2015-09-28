@@ -1,6 +1,6 @@
 module Control.Concurrent.Chan.Bounded.Batched (
-    BatchedChan
-  , newBatchedChan
+    Chan
+  , newChan
   , readChan
   , tryReadChan
   , readBatchChan
@@ -12,35 +12,35 @@ import Data.Sequence
 
 import qualified Control.Concurrent.Chan.Unagi.Bounded as CB
 
-data BatchedChan a = BatchedChan {
+data Chan a = Chan {
     inChan      :: CB.InChan a
   , outChan     :: CB.OutChan a
   , nextPending :: IORef (Maybe (IO a))
   }
 
-newBatchedChan :: Int -> IO (BatchedChan a)
-newBatchedChan size = do
+newChan :: Int -> IO (Chan a)
+newChan size = do
     (ichan, ochan) <- CB.newChan size
     ref <- newIORef Nothing
-    return $ BatchedChan ichan ochan ref
+    return $ Chan ichan ochan ref
 
-readNextPending :: BatchedChan a -> IO (Maybe a)
-readNextPending BatchedChan { nextPending = ref } = do
+readNextPending :: Chan a -> IO (Maybe a)
+readNextPending Chan { nextPending = ref } = do
     pending <- readIORef ref
     case pending of
         Just getNext -> do writeIORef ref Nothing
                            Just <$> getNext
         Nothing -> return Nothing
 
-readChan :: BatchedChan a -> IO a
-readChan bchan@BatchedChan { outChan = ochan } = do
+readChan :: Chan a -> IO a
+readChan bchan@Chan { outChan = ochan } = do
     pending <- readNextPending bchan
     case pending of
         Just e  -> return e
         Nothing -> CB.readChan ochan
 
-tryReadChan :: BatchedChan a -> IO (Maybe a)
-tryReadChan bchan@BatchedChan { outChan = ochan, nextPending = ref } = do
+tryReadChan :: Chan a -> IO (Maybe a)
+tryReadChan bchan@Chan { outChan = ochan, nextPending = ref } = do
     pending <- readNextPending bchan
     case pending of
         Just e  -> return $ Just e
@@ -51,10 +51,10 @@ tryReadChan bchan@BatchedChan { outChan = ochan, nextPending = ref } = do
                           Nothing -> do writeIORef ref $ Just pending'
                                         return Nothing
 
-writeChan :: BatchedChan a -> a -> IO ()
-writeChan BatchedChan { inChan = ichan } = CB.writeChan ichan
+writeChan :: Chan a -> a -> IO ()
+writeChan Chan { inChan = ichan } = CB.writeChan ichan
 
-readBatchChan :: (a -> b -> (Bool, b)) -> b -> BatchedChan a -> IO (Seq a)
+readBatchChan :: (a -> b -> (Bool, b)) -> b -> Chan a -> IO (Seq a)
 readBatchChan stopIf initSt bchan = do
     e <- readChan bchan
     stop e initSt (singleton e)

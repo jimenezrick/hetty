@@ -4,8 +4,8 @@ import System.Exit
 import System.IO
 import Text.Printf
 
-import BatchedChanTryRead
-import BatchedChanReadBatch
+import ChanTryRead
+import ChanReadBatch
 
 main :: IO ()
 main = do
@@ -26,6 +26,6 @@ runTest name = do
 
 tests :: [(String, IO ())]
 tests = [
-    ("BatchedChanTryRead", BatchedChanTryRead.run)
-  , ("BatchedChanReadBatch", BatchedChanReadBatch.run)
+    ("ChanTryRead", ChanTryRead.run)
+  , ("ChanReadBatch", ChanReadBatch.run)
     ]
