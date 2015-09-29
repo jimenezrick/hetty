@@ -1,40 +1,31 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveFunctor #-}
-
-module Pub where
+module Network.Hetty.Pub where
 
 import Data.Word
 import Data.Foldable
 import Data.IORef
 import Data.ByteString
 import Control.Monad
-import Control.Concurrent
-import Control.Concurrent.Chan.Unagi.Bounded as Chan
 import System.Socket
 import System.Socket.Family.Inet
 
-readSize = 4096
+-- XXX qualified
+import Control.Concurrent.Chan.Bounded.Batched as CBB
 
-queueSize = 1000
+data Conn a = Conn {
+    chan :: Chan a
+  , sock :: Socket Inet Stream TCP
+  }
 
-
-data Conn = Conn { inChan :: InChan ByteString
-                      , outChan :: OutChan ByteString
-                      , sock :: Socket Inet Stream TCP
-                      }
-
-newConn :: Socket Inet Stream TCP -> IO Conn
-newConn sock = do (inChan, outChan) <- Chan.newChan queueSize
-                  return Conn { inChan = inChan
-                              , outChan = outChan
-                              ,  sock = sock
-                              }
-                   
+newConn :: Socket Inet Stream TCP -> IO Conn a
+newConn sock = do chan <- newChan
+                  return Conn { chan = chan, sock = sock}
 
 
-newtype ContextRef a = ContextRef { unContextRef :: IORef Context } deriving Functor
+newtype ContextRef a = ContextRef {
+    unContextRef :: IORef Context a
+  } deriving Functor
 
-data Context = Context { conns :: [Conn] }
+data Context a = Context { conns :: [Conn a] }
 
 -- TODO: monadic interface?
 withContext :: ContextRef a -> (Context -> IO ()) -> IO ()
