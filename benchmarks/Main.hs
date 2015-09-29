@@ -9,12 +9,12 @@ import Chan
 main :: IO ()
 main = do
     chan <- newChan
-    forever $ writeChan chan 0
+    void $ forever $ writeChan chan 0
 
     bchan <- CBB.newChan 10000
-    forever $ CBB.writeChan bchan 0
+    void $ forever $ CBB.writeChan bchan 0
 
-    threadDelay (5 * 10^5)
+    threadDelay 500000
 
     defaultMain [
         bench "Chan.read" $ whnfIO (Chan.read chan)
