@@ -14,7 +14,7 @@ type Port = Word16
 
 createTCPTransport :: Socket -> Transport
 createTCPTransport sock = Transport {
-    send  = \buf -> void $ S.send sock buf mempty
+    send  = \buf -> void $ S.sendAll sock buf mempty
   , close = S.close sock
   }
 

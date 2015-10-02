@@ -1,6 +1,6 @@
 module Network.Hetty.Transport where
 
-import Data.ByteString
+import Data.ByteString.Lazy
 
 data Transport = Transport {
     send :: ByteString -> IO ()

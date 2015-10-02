@@ -5,6 +5,7 @@ module Control.Concurrent.Chan.Bounded.Batched (
   , tryReadChan
   , readBatchChan
   , writeChan
+  , tryWriteChan
   ) where
 
 import Prelude hiding (length)
@@ -57,7 +58,10 @@ tryReadChan bchan@Chan { outChan = ochan, nextPending = ref } = do
                                         return Nothing
 
 writeChan :: Chan -> ByteString -> IO ()
-writeChan Chan { inChan = ichan } = CB.writeChan ichan
+writeChan = CB.writeChan . inChan
+
+tryWriteChan :: Chan -> ByteString -> IO Bool
+tryWriteChan = CB.tryWriteChan . inChan
 
 readBatchChan :: Chan -> IO BL.ByteString
 readBatchChan bchan = do
