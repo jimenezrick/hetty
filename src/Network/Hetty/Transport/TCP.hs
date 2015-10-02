@@ -1,4 +1,4 @@
-module Network.Hetty.TCP where
+module Network.Hetty.Transport.TCP where
 
 import Control.Monad
 import Data.Word

@@ -1,13 +1,15 @@
 module Network.Hetty.Transport where
 
-data Transport a = Transport {
-    send :: [a] -> IO ()
+import Data.ByteString
+
+data Transport = Transport {
+    send :: ByteString -> IO ()
     -- XXX: receive
   , close :: IO ()
   }
 
 newtype Service a = Service a
 
-data Locator a b = Locator {
-    connect :: Service a -> IO (Transport b)
+data Locator a = Locator {
+    connect :: Service a -> IO Transport
   }

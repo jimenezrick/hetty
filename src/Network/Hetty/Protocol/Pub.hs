@@ -1,4 +1,7 @@
-module Network.Hetty.Pub where
+module Network.Hetty.Protocol.Pub where
+
+import Data.Binary
+import Data.Foldable
 
 import Data.Word
 import Data.Foldable
@@ -11,6 +14,7 @@ import System.Socket.Family.Inet
 -- XXX qualified
 import Control.Concurrent.Chan.Bounded.Batched as CBB
 
+-- XXX: Move to its own module
 data Conn a = Conn {
     chan :: Chan a
   , sock :: Socket Inet Stream TCP
@@ -68,17 +72,15 @@ connectPort ref port = do
 
 
 
+serialize :: Binary a => Seq a -> ByteString
+serialize xs = runPut $ traverse_ put xs
 
-
---
--- TODO: buffer and user blaze/builder for 4096 bytes per call
---
-runConn :: Conn -> IO ()
-runConn conn = void $ forkIO $ do
+activateConn :: Conn -> IO ()
+activateConn conn = void $ forkIO $ do
     print "Conn started"
     forever $ do
-    msg <- Chan.readChan o
-    send s msg mempty
-  where s = sock conn
-        o = outChan conn
+    msg <- Chan.readChan $ outChan conn
+    send (sock conn) msg mempty
+  where genBatch msg cnt
 
+        batch <- CBB.readBatchChan (\_ cnt -> (cnt == 10, cnt+1)) (1 :: Int) bchan
