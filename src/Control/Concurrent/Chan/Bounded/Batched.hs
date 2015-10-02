@@ -7,24 +7,29 @@ module Control.Concurrent.Chan.Bounded.Batched (
   , writeChan
   ) where
 
+import Prelude hiding (length)
+import Data.ByteString
+import Data.ByteString.Builder
+import Data.ByteString.Builder.Extra
 import Data.IORef
-import Data.Sequence
+
+import qualified Data.ByteString.Lazy as BL
 
 import qualified Control.Concurrent.Chan.Unagi.Bounded as CB
 
-data Chan a = Chan {
-    inChan      :: CB.InChan a
-  , outChan     :: CB.OutChan a
-  , nextPending :: IORef (Maybe (IO a))
+data Chan = Chan {
+    inChan      :: CB.InChan ByteString
+  , outChan     :: CB.OutChan ByteString
+  , nextPending :: IORef (Maybe (IO ByteString))
   }
 
-newChan :: Int -> IO (Chan a)
+newChan :: Int -> IO Chan
 newChan size = do
     (ichan, ochan) <- CB.newChan size
     ref <- newIORef Nothing
     return $ Chan ichan ochan ref
 
-readNextPending :: Chan a -> IO (Maybe a)
+readNextPending :: Chan -> IO (Maybe ByteString)
 readNextPending Chan { nextPending = ref } = do
     pending <- readIORef ref
     case pending of
@@ -32,14 +37,14 @@ readNextPending Chan { nextPending = ref } = do
                            Just <$> getNext
         Nothing -> return Nothing
 
-readChan :: Chan a -> IO a
+readChan :: Chan -> IO ByteString
 readChan bchan@Chan { outChan = ochan } = do
     pending <- readNextPending bchan
     case pending of
         Just e  -> return e
         Nothing -> CB.readChan ochan
 
-tryReadChan :: Chan a -> IO (Maybe a)
+tryReadChan :: Chan -> IO (Maybe ByteString)
 tryReadChan bchan@Chan { outChan = ochan, nextPending = ref } = do
     pending <- readNextPending bchan
     case pending of
@@ -51,17 +56,23 @@ tryReadChan bchan@Chan { outChan = ochan, nextPending = ref } = do
                           Nothing -> do writeIORef ref $ Just pending'
                                         return Nothing
 
-writeChan :: Chan a -> a -> IO ()
+writeChan :: Chan -> ByteString -> IO ()
 writeChan Chan { inChan = ichan } = CB.writeChan ichan
 
-readBatchChan :: (a -> b -> (Bool, b)) -> b -> Chan a -> IO (Seq a)
-readBatchChan stopIf initSt bchan = do
+readBatchChan :: Chan -> IO BL.ByteString
+readBatchChan bchan = do
     e <- readChan bchan
-    stop e initSt (singleton e)
-  where stop e st batch = case stopIf e st of
-                              (True, _)    -> return batch
-                              (False, st') -> go st' batch
-        go st batch = do r <- tryReadChan bchan
-                         case r of
-                             Just e  -> stop e st (batch |> e)
-                             Nothing -> return batch
+    stop (length e) $ byteString e
+  where stop size batch | size >= batchSize = return $ concatBatch batch
+                        | otherwise         = go size batch
+        go size batch = do r <- tryReadChan bchan
+                           case r of
+                               Just e  -> stop (size + length e) (batch `mappend` byteString e)
+                               Nothing -> return $ concatBatch batch
+
+batchSize :: Int
+batchSize = 4096
+
+concatBatch :: Builder -> BL.ByteString
+concatBatch = toLazyByteStringWith
+    (untrimmedStrategy smallChunkSize defaultChunkSize) BL.empty
